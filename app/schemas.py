@@ -73,4 +73,17 @@ class SubscriptionResponse(BaseModel):
 
     model_config = {"from_attributes":True}
 
+class EventCreate(BaseModel):
+    event_type: str = Field(max_length=64)
+    payload: dict
+
+class EventResponse(BaseModel):
+    id: int
+    event_type: str
+    payload: dict
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 

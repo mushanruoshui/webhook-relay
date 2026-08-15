@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.database import engine
 from app.database import Base
 from app.routers import subscriptions
+from app.routers import events
 
 Base.metadata.create_all(engine)
 
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 app.include_router(subscriptions.router)
+app.include_router(events.router)
 
 @app.get("/")
 def root():
