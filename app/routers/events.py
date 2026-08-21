@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app import models
 from app import schemas
-from app.schemas import SubscriptionResponse, EventResponse
+from app.schemas import EventResponse
+from app.services.delivery import deliver_event
+
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 @router.post("/",response_model=schemas.EventResponse,status_code=202)
 def create_event(
+        background_task: BackgroundTasks,
         evn_in: schemas.EventCreate,
         db: Session = Depends(get_db)
 ):
@@ -20,6 +22,7 @@ def create_event(
     db.add(evn_obj)
     db.commit()
     db.refresh(evn_obj)
+    background_task.add_task(deliver_event, evn_obj.id)
 
     return evn_obj
 

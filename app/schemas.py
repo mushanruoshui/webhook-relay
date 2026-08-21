@@ -85,5 +85,17 @@ class EventResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class DeliveryResponse(BaseModel):
+    id: int
+    event_id: int
+    subscription_id: int
+    status: str
+    attempt_count: int
+    response_code: int | None = None
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
 
 
