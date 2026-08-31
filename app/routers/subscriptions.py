@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from app.auth import verify_api_key
 from app.database import get_db
 from app import models
 from app import schemas
 from app.schemas import SubscriptionResponse
 
-router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
+router = APIRouter(prefix="/api/subscriptions",
+                   tags=["subscriptions"],
+                   dependencies=[Depends(verify_api_key)]
+)
 
 @router.post("/",response_model=schemas.SubscriptionResponse, status_code=201)
 def create_subscription(sub_in: schemas.SubscriptionCreate,

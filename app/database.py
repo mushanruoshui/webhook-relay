@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import DeclarativeBase
@@ -5,7 +7,10 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
-engine = create_engine("sqlite:///./webhook.db", connect_args={"check_same_thread": False})
+# 数据库位置可由环境变量覆盖（测试时指向独立的 test.db），默认用业务库
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./webhook_1.db")
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 factory = sessionmaker(
     engine,

@@ -33,9 +33,10 @@ class Delivery(Base):
     attempt_count : Mapped[int] = mapped_column(Integer,default = 0)
     response_code : Mapped[int] = mapped_column(Integer,nullable=True)
     error_message : Mapped[str] = mapped_column(String(512),nullable=True)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=None,nullable=True,index=True)
     created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
     updated_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(),onupdate=func.now())
-
 
 
 

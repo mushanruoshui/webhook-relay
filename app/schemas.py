@@ -97,5 +97,14 @@ class DeliveryResponse(BaseModel):
     updated_at: datetime
     model_config = {"from_attributes": True}
 
+class DeliveryListResponse(BaseModel):
+    """GET /api/deliveries 的响应：分页列表的标准形状"""
+    total: int = Field(description="过滤后的总条数（不含分页）")
+    items: list[DeliveryResponse]
+
+class EventDetailResponse(EventResponse):
+    """GET /api/events/{id} 的响应：事件详情 + 关联投递记录"""
+    deliveries: list[DeliveryResponse] = Field(default_factory=list)
+
 
 
