@@ -84,3 +84,52 @@ python test_receiver.py
 ## 用户偏好
 - 中文交流
 - 求职项目，注重代码质量和工程规范
+- 初次部署，需要详细讲解每步操作的含义
+
+## 部署状态（2026-09-01）
+
+### 已完成
+- [x] 代码推送到 GitHub: `https://github.com/mushanruoshui/webhook-relay`
+- [x] 阿里云 ECS 购买，Ubuntu 22.04，公网 IP: `47.109.128.96`
+- [x] SSH 密钥登录（deploy 用户，禁用 root 登录和密码登录）
+- [x] 防火墙 ufw 开放 22/80/443 端口
+- [x] 服务器拉取代码到 `/opt/webhook-relay/`
+- [x] Python 3.10 虚拟环境 + pip 依赖安装（补充了 python-dotenv）
+- [x] `.env` 文件已创建在服务器（API_KEY 随机生成，已告知用户）
+- [x] systemd 服务 `webhook-relay.service` 后台常驻运行
+- [x] Nginx 反向代理 80端口 → localhost:8000
+- [x] 验证通过：`curl http://47.109.128.96/` 返回 `{"message":"Webhook Relay is running"}`
+
+### 未完成
+- [ ] HTTPS（需要域名 + certbot，可选）
+- [ ] 本地代码的 `.env` 需同步 `python-dotenv` 到 `requirements.txt`（服务器已改，本地未改）
+- [ ] 服务器端代码更新流程（git pull + systemctl restart）还未实际使用过
+
+### 服务器运维常用命令
+```bash
+# SSH 连接
+ssh deploy@47.109.128.96
+
+# 查看服务状态
+sudo systemctl status webhook-relay
+
+# 重启服务
+sudo systemctl restart webhook-relay
+
+# 查看实时日志
+sudo journalctl -u webhook-relay -f
+
+# 代码更新部署
+cd /opt/webhook-relay
+git pull
+sudo systemctl restart webhook-relay
+```
+
+### 服务器关键路径
+| 路径 | 说明 |
+|------|------|
+| `/opt/webhook-relay/` | 项目代码 |
+| `/opt/webhook-relay/.venv/` | Python 虚拟环境 |
+| `/opt/webhook-relay/.env` | 服务器环境变量（API_KEY） |
+| `/etc/systemd/system/webhook-relay.service` | systemd 服务配置 |
+| `/etc/nginx/sites-available/webhook-relay` | Nginx 配置 |
