@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.db
+*.db-journal
+.env
+.venv
+venv
+tests/
+.pytest_cache
+.vscode
+.idea
+*.md
+!requirements.txt
