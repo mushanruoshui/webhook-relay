@@ -4,6 +4,11 @@ import httpx
 from datetime import datetime, timedelta, timezone
 import json, hmac, hashlib, time
 
+BACKOFF_BASE_SECONDS = 60
+
+def _backoff_seconds(attempt_count: int) -> int:
+    return BACKOFF_BASE_SECONDS * (2 ** (attempt_count - 1))
+
 def deliver_event(event_id: int):
     db = factory()
     try:
@@ -82,7 +87,7 @@ def _attempt_delivery(delivery_id):
                     delivery.next_attempt_at = None
                 else:
                     delivery.status = 'retrying'
-                    delay = 2 ** delivery.attempt_count
+                    delay = _backoff_seconds(delivery.attempt_count)
                     delivery.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
 
         except Exception as e:
@@ -95,7 +100,7 @@ def _attempt_delivery(delivery_id):
                 delivery.next_attempt_at = None
             else:
                 delivery.status = 'retrying'
-                delay = 2 ** delivery.attempt_count
+                delay = _backoff_seconds(delivery.attempt_count)
                 delivery.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
 
         db.commit()
