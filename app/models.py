@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy import String,Integer,DateTime,func,JSON,ForeignKey
+from sqlalchemy import String,Integer,DateTime,func,JSON,ForeignKey,Index
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 
@@ -34,9 +34,12 @@ class Delivery(Base):
     response_code : Mapped[int] = mapped_column(Integer,nullable=True)
     error_message : Mapped[str] = mapped_column(String(512),nullable=True)
     max_attempts: Mapped[int] = mapped_column(Integer, default=5)
-    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=None,nullable=True,index=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=None,nullable=True)
     created_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
     updated_at : Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(),onupdate=func.now())
+    __table_args__ = (
+        Index("ix_deliveries_status_next_attempt", "status", "next_attempt_at"),
+    )
 
 
 
