@@ -2,7 +2,8 @@
 
 一个轻量级的 Webhook 事件转发服务：接收事件，异步投递给所有匹配的订阅者，支持失败重试和签名验证。
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/deps-uv-DE5FE9.svg)](https://docs.astral.sh/uv/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141-green.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)](https://www.sqlalchemy.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -54,6 +55,7 @@ graph LR
 | HTTP 客户端 | httpx | 投递 Webhook 请求（同步调用） |
 | 定时任务 | APScheduler | 后台重试调度（BackgroundScheduler） |
 | 签名算法 | HMAC-SHA256 | Webhook 签名验证 |
+| 依赖管理 | uv | 声明式依赖 + 全平台锁文件，管理 Python 版本与虚拟环境 |
 
 ## 快速开始
 
@@ -64,20 +66,29 @@ git clone https://github.com/mushanruoshui/webhook-relay.git
 cd webhook-relay
 ```
 
-### 2. 创建虚拟环境
+### 2. 安装 uv
+
+依赖由 [uv](https://docs.astral.sh/uv/) 管理：`pyproject.toml` 声明依赖，`uv.lock` 锁定完整依赖图，`.python-version` 固定 Python 版本。
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# 或
-.venv\Scripts\activate     # Windows
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows（PowerShell）
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 或已装 pip 的环境（内网/受限环境适用）
+pip install uv
 ```
 
-### 3. 安装依赖
+### 3. 同步依赖（自动创建 .venv）
 
 ```bash
-pip install -r requirements.txt
+uv sync            # 运行期 + 开发依赖（含 pytest）→ 生成/更新 .venv
+uv sync --no-dev   # 只装运行期依赖（生产/容器）
 ```
+
+`.python-version` 写的 `3.11` 会让 uv 自动准备对应解释器，**不需要手工装 Python**；环境已存在时 `uv sync` 会就地修正，不必先删 `.venv`。
 
 ### 4. 配置环境变量
 
@@ -95,10 +106,10 @@ DATABASE_URL=sqlite:///./webhook_1.db
 
 ```bash
 # 开发模式（自动重载）
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # 生产模式
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 > ⚠️ `--workers 4` 目前**不安全**，会导致重复投递，原因见「设计边界」第 1 条。单机部署请使用默认的单 worker。
@@ -295,7 +306,7 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
 `scripts/add_composite_index.py` 用于给存量库补建索引，脚本是**幂等**的（`CREATE INDEX IF NOT EXISTS`），并会打印 `EXPLAIN QUERY PLAN` 输出以便确认索引确实被命中：
 
 ```bash
-python scripts/add_composite_index.py
+uv run python -m scripts.add_composite_index
 ```
 
 输出示例：
@@ -313,10 +324,10 @@ EXPLAIN QUERY PLAN:
 
 ```bash
 # 运行测试
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # 启动测试接收方（端口 9000）
-python test_receiver.py
+uv run python test_receiver.py
 ```
 
 `tests/conftest.py` 在 **import app 之前**通过环境变量把数据库指向独立的 `test.db` 并固定 `API_KEY`，因此测试不会污染业务库 `webhook_1.db`；每个测试函数前重建全部表，保证用例之间互不干扰。
@@ -361,10 +372,14 @@ curl -X POST http://localhost:8000/api/events \
 
 2. **环境配置**
    ```bash
-   # 创建虚拟环境
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
+   # 安装 uv（该服务器出网受限，用 pip 走已验证可用的镜像源）
+   python3 -m pip install uv
+
+   # 按 uv.lock 创建 .venv 并安装运行期依赖，不做重新解析
+   uv sync --frozen --no-dev
+
+   # 如需在服务器上跑测试，去掉 --no-dev
+   # uv sync --frozen
 
    # 配置环境变量
    cp .env.example .env
@@ -401,7 +416,8 @@ curl -X POST http://localhost:8000/api/events \
 
 ```bash
 # 构建镜像
-docker build -t webhook-relay .
+docker build --platform linux/amd64 -t webhook-relay .
+# 首次构建会拉取 ghcr.io/astral-sh/uv:0.11.29（约 20MB）与 python:3.11-slim
 
 # 用 compose 启动（读取 .env 中的 API_KEY）
 docker compose up -d
@@ -417,7 +433,9 @@ docker compose exec app sh
 docker compose down
 ```
 
-Dockerfile 采用「先复制 `requirements.txt` 单独安装依赖，再复制源码」的顺序，以便在仅修改业务代码时命中镜像层缓存，避免重复安装依赖。
+Dockerfile 采用两段式构建：先 `COPY pyproject.toml uv.lock` 并执行 `uv sync --frozen --no-dev`，再 `COPY . .` 复制源码。因此仅修改业务代码时不会触发依赖重装，镜像层缓存得以命中。
+
+`uv` 二进制通过多阶段 `COPY --from=ghcr.io/astral-sh/uv:0.11.29` 从官方镜像取出，镜像内**不含 pip**；业务依赖全部来自 `uv.lock`，`--frozen` 保证构建机上的解析结果与仓库一致。`UV_PYTHON_DOWNLOADS=never` 则确保版本不匹配时构建立刻失败，而不是静默下载一个解释器。
 
 ### 已知的部署限制
 
@@ -480,7 +498,9 @@ webhook-relay/
 │   └── test_deliveries.py
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt       # Python 依赖
+├── pyproject.toml         # 依赖声明（PEP 621）+ dev 依赖组
+├── uv.lock                # 全平台通用锁文件（提交进仓库）
+├── .python-version        # 统一的 Python 版本（3.11）
 ├── .env.example           # 环境变量模板
 ├── .gitignore
 └── README.md

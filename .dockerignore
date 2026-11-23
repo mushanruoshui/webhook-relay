@@ -9,5 +9,5 @@ tests/
 .pytest_cache
 .vscode
 .idea
+data/
 *.md
-!requirements.txt

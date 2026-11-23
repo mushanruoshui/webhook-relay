@@ -1,0 +1,23 @@
+[project]
+name = "webhook-relay"
+version = "0.1.0"
+description = "轻量级 Webhook 事件转发服务：接收事件、按订阅异步投递、失败指数退避重试"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.1",
+    "sqlalchemy==2.0.51",
+    "pydantic==2.13.4",
+    "httpx==0.28.1",
+    "apscheduler==3.11.3",
+    "python-dotenv==1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+]
+
+[tool.uv]
+package = false

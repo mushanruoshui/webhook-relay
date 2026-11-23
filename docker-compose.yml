@@ -1,7 +1,8 @@
-version: '3.8'
 services:
   app:
     build: .
+    image: webhook-relay:1.0.0
+    platform: linux/amd64
     container_name: webhook-relay
     ports:
       - "8000:8000"
