@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY --from=uv /uv /uvx /bin/
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-dev
 
 COPY . .
