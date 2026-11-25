@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:      # 允许在网页上手动点“Run workflow”
+
+concurrency:              # 同一分支连续推送时，取消上一次未跑完的任务
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 测试 (Linux / Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 按 uv.lock 安装依赖
+        run: uv sync --locked
+
+      - name: 运行测试
+        run: uv run pytest tests/ -v
+
+  docker:
+    name: 构建镜像
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 构建镜像
+        run: docker build -t webhook-relay:ci .
+
+      - name: 校验镜像内容
+        run: |
+          docker run --rm webhook-relay:ci python -c "import fastapi, uvicorn, sqlalchemy, httpx, apscheduler, dotenv, pydantic; print('runtime deps ok')"
+          docker run --rm webhook-relay:ci python -V
+          if docker run --rm webhook-relay:ci python -c "import pytest" 2>/dev/null; then
+            echo "::error::镜像里不应包含 pytest，说明 --no-dev 没生效"
+            exit 1
+          fi
